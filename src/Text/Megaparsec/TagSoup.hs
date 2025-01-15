@@ -48,7 +48,7 @@ type TagParser e str = Parsec e [Tag str]
 incPos :: Pos -> Pos
 incPos = (pos1 <>)
 
-instance forall str. (Ord str, Show str) => Stream [Tag str] where
+instance {-# OVERLAPPING #-} forall str. Ord str => Stream [Tag str] where
   type Token [Tag str] = Tag str
   type Tokens [Tag str] = [Tag str]
   tokenToChunk _ tag = [tag]
@@ -68,13 +68,17 @@ instance forall str. (Ord str, Show str) => Stream [Tag str] where
     takeWhile' ys (x:xs)
       | f x = takeWhile' (x:ys) xs
       | otherwise = (ys, x:xs)
+
+instance {-# OVERLAPPING #-} forall str. (Ord str, Show str) => VisualStream [Tag str] where
   showTokens _ = show
+
+instance {-# OVERLAPPING #-} forall str. (Ord str, Show str) => TraversableStream [Tag str] where
   reachOffset i state = reachOffset' i state [] where
     replaceEmpty "" = "<empty line>"
     replaceEmpty x = x
-    reachOffset' :: Int -> PosState [Tag str] -> [String] -> (SourcePos, String, PosState [Tag str])
+    reachOffset' :: Int -> PosState [Tag str] -> [String] -> (Maybe String, PosState [Tag str])
     reachOffset' j s' strs
-      | j <= 0 = (pstateSourcePos s', replaceEmpty (fold (reverse strs)), s')
+      | j <= 0 = (Just $ replaceEmpty (fold (reverse strs)), s')
       | otherwise = let str = case pstateInput s' of
                                 [] -> ""
                                 (x:_) -> show x
